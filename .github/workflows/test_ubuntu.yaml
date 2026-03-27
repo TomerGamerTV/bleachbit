@@ -129,9 +129,13 @@ jobs:
         echo "Linux-only coverage before combine:"
         coverage report
         mv .coverage .coverage.ubuntu
-        appveyor-artifacts -o az0 -n bleachbit -m -c ${{ github.sha }} download
-        mv .coverage .coverage.windows
-        echo "Combined coverage:"
-        coverage combine
+        if appveyor-artifacts -o az0 -n bleachbit -m -c ${{ github.sha }} download; then
+          mv .coverage .coverage.windows
+          echo "Combined coverage:"
+          coverage combine
+        else
+          echo "Windows coverage artifact unavailable for commit ${{ github.sha }}. Uploading Linux-only coverage."
+          mv .coverage.ubuntu .coverage
+        fi
         coverage report
         coveralls

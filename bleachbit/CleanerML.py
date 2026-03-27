@@ -327,9 +327,25 @@ class CleanerML:
          </var>
         """
         var_name = var.attrib.get('name', '')
+        darwin_fallback = False
+        if sys.platform == 'darwin':
+            has_explicit_darwin = any(
+                (value_element.attrib.get('os', '') == 'darwin')
+                for value_element in var.findall('value')
+            )
+            # Full cleaner-by-cleaner macOS pass fallback:
+            # when a variable has no explicit macOS value, reuse Unix-like
+            # value definitions as a compatibility default.
+            darwin_fallback = not has_explicit_darwin
         for value_element in var.findall('value'):
-            if not self.os_match(value_element.attrib.get('os', '')):
-                continue
+            value_os = value_element.attrib.get('os', '')
+            if not self.os_match(value_os):
+                if not (darwin_fallback and value_os in ('linux', 'freebsd', 'openbsd', 'netbsd')):
+                    continue
+            elif sys.platform == 'darwin' and value_os in ('linux', 'freebsd', 'openbsd', 'netbsd'):
+                logger.debug(
+                    "Using non-darwin fallback variable '%s' value on macOS: %s",
+                    var_name, value_os)
             value_str = _gettext_etree(value_element)
             search_type = value_element.attrib.get('search', '')
             if search_type == 'glob':

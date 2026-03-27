@@ -224,7 +224,7 @@ def os_match(os_str, platform=sys.platform):
     # Otherwise, check platform.
     # Define the current operating system.
     if platform == 'darwin':
-        current_os = ('darwin', 'bsd', 'unix')
+        current_os = ('darwin', 'macos', 'osx', 'bsd', 'unix')
     elif platform == 'linux':
         current_os = ('linux', 'unix')
     elif platform.startswith('openbsd'):
