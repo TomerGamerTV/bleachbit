@@ -50,6 +50,7 @@ jobs:
             --icon bleachbit.png \
             --add-data "bleachbit.png:." \
             --add-data "cleaners:cleaners" \
+            --add-data "themes:themes" \
             --add-data "po:po" \
             --add-data "locale:locale" \
             bleachbit.py

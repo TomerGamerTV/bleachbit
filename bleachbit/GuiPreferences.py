@@ -26,6 +26,7 @@ Preferences dialog
 # standard imports
 import logging
 import os
+import sys
 
 # first party imports
 from bleachbit import GuiBasic
@@ -64,9 +65,10 @@ class PreferencesDialog:
 
     """Present the preferences dialog and save changes"""
 
-    def __init__(self, parent, cb_refresh_operations, cb_set_windows10_theme):
+    def __init__(self, parent, cb_refresh_operations, cb_set_windows10_theme, cb_set_macos_liquid_glass):
         self.cb_refresh_operations = cb_refresh_operations
         self.cb_set_windows10_theme = cb_set_windows10_theme
+        self.cb_set_macos_liquid_glass = cb_set_macos_liquid_glass
 
         self.parent = parent
         # TRANSLATORS: Title for the preferences dialog
@@ -261,6 +263,8 @@ class PreferencesDialog:
             before_dark = detect_dark_background(theme_widget)
             if 'nt' == os.name and options.get('win10_theme'):
                 self.cb_set_windows10_theme()
+            if sys.platform == 'darwin' and options.get('macos_liquid_glass'):
+                self.cb_set_macos_liquid_glass()
 
             settings = self.dialog.get_settings()
             if settings:
@@ -280,6 +284,8 @@ class PreferencesDialog:
                     Gtk.MessageType.WARNING)
         if 'win10_theme' == path:
             self.cb_set_windows10_theme()
+        if 'macos_liquid_glass' == path:
+            self.cb_set_macos_liquid_glass()
         if 'debug' == path:
             from bleachbit.Log import set_root_log_level
             set_root_log_level(options.get('debug'))
@@ -540,6 +546,13 @@ class PreferencesDialog:
             _("Dark mode"),
             'dark_mode',
             vbox=interface_box)
+
+        if sys.platform == 'darwin':
+            self._create_checkbox(
+                # TRANSLATORS: Checkbox label to toggle translucent macOS-like styling.
+                _("Liquid glass effect"),
+                'macos_liquid_glass',
+                vbox=interface_box)
 
         if 'nt' == os.name:
             self._create_checkbox(

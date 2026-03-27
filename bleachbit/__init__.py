@@ -16,7 +16,7 @@ from configparser import NoOptionError, RawConfigParser  # used in other files
 
 from bleachbit import Log
 
-APP_VERSION = "5.1.2"
+APP_VERSION = "5.1.3"
 APP_NAME = "BleachBit"
 APP_URL = "https://www.bleachbit.org"
 APP_COPYRIGHT = "Copyright (C) 2008-2026 Andrew Ziem"
@@ -198,6 +198,8 @@ def get_share_path(filename):
 # windows10 theme
 windows10_theme_path = os.path.normpath(
     os.path.join(bleachbit_exe_path, 'themes/windows10'))
+macos_liquid_glass_theme_path = os.path.normpath(
+    os.path.join(bleachbit_exe_path, 'themes/macos'))
 
 # application icon
 __icons = (

@@ -28,6 +28,7 @@ import errno
 import logging
 import os
 import re
+import sys
 import threading
 
 # third-party imports
@@ -65,10 +66,14 @@ OPTION_DEFAULTS = {
     'update_winapp2': {'value': False, 'platforms': ('nt',)},
     'use_fontconfig_backend': {'value': False, 'platforms': ('nt',)},
     'win10_theme': {'value': False, 'platforms': ('nt',)},
+    'macos_liquid_glass': {'value': True, 'sys_platforms': ('darwin',)},
 }
 
 
 def _platform_allows(meta):
+    sys_platforms = meta.get('sys_platforms')
+    if sys_platforms and sys.platform not in sys_platforms:
+        return False
     platforms = meta.get('platforms')
     return not platforms or os.name in platforms
 
