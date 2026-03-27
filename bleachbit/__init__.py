@@ -16,10 +16,11 @@ from configparser import NoOptionError, RawConfigParser  # used in other files
 
 from bleachbit import Log
 
-APP_VERSION = "5.1.1"
+APP_VERSION = "5.1.2"
 APP_NAME = "BleachBit"
 APP_URL = "https://www.bleachbit.org"
 APP_COPYRIGHT = "Copyright (C) 2008-2026 Andrew Ziem"
+MACOS_BUNDLE_IDENTIFIER = "com.tomergamertv.bleachbit"
 
 socket_timeout = 10
 
@@ -78,7 +79,11 @@ if 'posix' == os.name:
             _home = '/tmp'
             logger.warning('HOME not set and no passwd entry; using %s', _home)
         os.environ['HOME'] = _home
-    options_dir = os.path.expanduser("~/.config/bleachbit")
+    if sys.platform == 'darwin':
+        options_dir = os.path.expanduser(
+            "~/Library/Application Support/BleachBit")
+    else:
+        options_dir = os.path.expanduser("~/.config/bleachbit")
 elif 'nt' == os.name:
     os.environ.pop('FONTCONFIG_FILE', None)
     if os.path.exists(os.path.join(bleachbit_exe_path, 'bleachbit.ini')):
@@ -116,8 +121,20 @@ personal_cleaners_dir = os.path.join(options_dir, "cleaners")
 # personal_cleaners_dir.
 if os.path.isdir(os.path.join(bleachbit_exe_path, 'cleaners')) and not portable_mode:
     system_cleaners_dir = os.path.join(bleachbit_exe_path, 'cleaners')
-elif sys.platform in ('linux', 'darwin'):
+elif sys.platform == 'linux':
     system_cleaners_dir = '/usr/share/bleachbit/cleaners'
+elif sys.platform == 'darwin':
+    # Consider both Homebrew prefixes (Apple Silicon and Intel), then the
+    # traditional /usr/share path used by source installs.
+    for candidate in (
+            '/opt/homebrew/share/bleachbit/cleaners',
+            '/usr/local/share/bleachbit/cleaners',
+            '/usr/share/bleachbit/cleaners'):
+        if os.path.isdir(candidate):
+            system_cleaners_dir = candidate
+            break
+    else:
+        system_cleaners_dir = '/opt/homebrew/share/bleachbit/cleaners'
 elif sys.platform == 'win32':
     system_cleaners_dir = os.path.join(bleachbit_exe_path, 'share\\cleaners\\')
 elif sys.platform[:6] == 'netbsd':
@@ -189,6 +206,7 @@ __icons = (
     '/usr/local/share/pixmaps/bleachbit.png',  # FreeBSD and OpenBSD
     os.path.normpath(os.path.join(bleachbit_exe_path,
                                   'share\\bleachbit.png')),  # Windows
+    os.path.normpath(os.path.join(bleachbit_exe_path, '..', 'Resources', 'bleachbit.png')),  # macOS bundle
     # When running from source (i.e., not installed).
     os.path.normpath(os.path.join(bleachbit_exe_path, 'bleachbit.png')),
 )
@@ -227,11 +245,16 @@ if 'nt' == os.name:
 if 'posix' == os.name:
     # Set fallbacks for environment variables.
     envs = {
-        'PATH': '/usr/bin:/bin:/usr/sbin:/sbin',
+        'PATH': '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
         'XDG_CACHE_HOME': os.path.expanduser('~/.cache'),
         'XDG_CONFIG_HOME': os.path.expanduser('~/.config'),
         'XDG_DATA_HOME': os.path.expanduser('~/.local/share')
     }
+    if sys.platform == 'darwin':
+        envs['XDG_CACHE_HOME'] = os.path.expanduser('~/Library/Caches')
+        envs['XDG_CONFIG_HOME'] = os.path.expanduser('~/Library/Preferences')
+        envs['XDG_DATA_HOME'] = os.path.expanduser(
+            '~/Library/Application Support')
     if not os.getenv('USER'):
         try:
             envs['USER'] = getpass.getuser()

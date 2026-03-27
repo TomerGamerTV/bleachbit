@@ -20,6 +20,18 @@ For information regarding the command line interface, run:
 
 Read more about [running from source](https://docs.bleachbit.org/dev/running-from-source-code.html).
 
+## macOS support
+
+BleachBit now includes first-class macOS cleaner paths for Safari, Firefox,
+Chromium, Google Chrome, Brave, and Microsoft Edge profile/cache locations.
+On macOS, settings are stored in:
+
+`~/Library/Application Support/BleachBit`
+
+For best results on macOS Tahoe and newer, grant Full Disk Access to the app
+bundle in **System Settings → Privacy & Security → Full Disk Access** so the
+cleaners can access protected browser and app data folders.
+
 ## Links
 
 * [BleachBit home page](https://www.bleachbit.org)

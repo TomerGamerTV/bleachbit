@@ -1,0 +1,67 @@
+name: Build macOS app bundle
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'bleachbit/**'
+      - 'cleaners/**'
+      - 'requirements.txt'
+      - '.github/workflows/build_macos_app.yml'
+
+jobs:
+  build-macos-app:
+    runs-on: macos-14
+    timeout-minutes: 45
+
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+      BUNDLE_ID: 'com.tomergamertv.bleachbit'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Generate Revision.py
+        run: |
+          echo "revision = \"$(git rev-parse --short HEAD)\"" > bleachbit/Revision.py
+          echo "build_number = \"${{ github.run_number }}\"" >> bleachbit/Revision.py
+
+      - name: Generate local translations
+        run: make -C po local
+
+      - name: Build .app bundle with PyInstaller
+        run: |
+          pyinstaller --noconfirm --clean --windowed \
+            --name BleachBit \
+            --osx-bundle-identifier "$BUNDLE_ID" \
+            --icon bleachbit.png \
+            --add-data "bleachbit.png:." \
+            --add-data "cleaners:cleaners" \
+            --add-data "po:po" \
+            --add-data "locale:locale" \
+            bleachbit.py
+
+      - name: Zip app artifact
+        run: |
+          cd dist
+          ditto -c -k --keepParent BleachBit.app BleachBit-macos-universal.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BleachBit-macos-app
+          path: dist/BleachBit-macos-universal.zip
+          if-no-files-found: error

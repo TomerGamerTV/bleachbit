@@ -46,8 +46,11 @@ class Bleachbit(Gtk.Application):
         xdist_worker = os.environ.get('PYTEST_XDIST_WORKER', '')
         if xdist_worker:
             application_id_suffix += xdist_worker
-        application_id = '{}{}'.format(
-            'org.gnome.Bleachbit', application_id_suffix)
+        if sys.platform == 'darwin':
+            app_id_base = bleachbit.MACOS_BUNDLE_IDENTIFIER
+        else:
+            app_id_base = 'org.gnome.Bleachbit'
+        application_id = '{}{}'.format(app_id_base, application_id_suffix)
         Gtk.Application.__init__(
             self, application_id=application_id, flags=Gio.ApplicationFlags.FLAGS_NONE)
         GLib.set_prgname('org.bleachbit.BleachBit')
