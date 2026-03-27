@@ -201,9 +201,16 @@ def get_system_information():
 
     info['os.path.expanduser(~")'] = os.path.expanduser('~')
 
-    # Mac Version Name - Dictionary
-    macosx_dict = {'5': 'Leopard', '6': 'Snow Leopard', '7': 'Lion', '8': 'Mountain Lion',
-                   '9': 'Mavericks', '10': 'Yosemite', '11': 'El Capitan', '12': 'Sierra'}
+    # macOS major version dictionary (non-exhaustive; keeps unknown versions).
+    macos_dict = {
+        '11': 'Big Sur',
+        '12': 'Monterey',
+        '13': 'Ventura',
+        '14': 'Sonoma',
+        '15': 'Sequoia',
+        '16': 'Tahoe',
+        '26': 'Tahoe',
+    }
 
     if sys.platform == 'linux':
         from bleachbit.Unix import get_distribution_name_version
@@ -211,9 +218,12 @@ def get_system_information():
     elif sys.platform.startswith('darwin'):
         if hasattr(platform, 'mac_ver'):
             mac_version = platform.mac_ver()[0]
-            version_minor = mac_version.split('.')[1]
-            if version_minor in macosx_dict:
-                info['platform.mac_ver()'] = f'{mac_version} ({macosx_dict[version_minor]})'
+            version_major = mac_version.split('.')[0]
+            codename = macos_dict.get(version_major)
+            if codename:
+                info['platform.mac_ver()'] = f'{mac_version} ({codename})'
+            else:
+                info['platform.mac_ver()'] = mac_version
     else:
         info['platform.uname().version'] = platform.uname().version
 

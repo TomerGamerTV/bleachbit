@@ -24,13 +24,16 @@
   <description>Web browser</description>
   <running type="exe" os="windows" same_user="true">brave.exe</running>
   <running type="exe" os="linux" same_user="true">brave</running>
+  <running type="exe" os="darwin" same_user="true">Brave Browser</running>
   <var name="base">
     <value os="windows">%LocalAppData%\BraveSoftware\Brave-Browser\User Data</value>
     <value os="linux">$XDG_CONFIG_HOME/BraveSoftware/Brave-Browser</value>
+    <value os="darwin">~/Library/Application Support/BraveSoftware/Brave-Browser</value>
   </var>
   <var name="profile">
     <value os="windows">%LocalAppData%\BraveSoftware\Brave-Browser\User Data\Default</value>
     <value os="linux">$XDG_CONFIG_HOME/BraveSoftware/Brave-Browser/Default</value>
+    <value os="darwin">~/Library/Application Support/BraveSoftware/Brave-Browser/Default</value>
   </var>
   <option id="cache">
     <label>Cache</label>
@@ -50,6 +53,7 @@
     <action command="json" search="file" path="$$base$$/Local State" address="StartupDNSPrefetchList"/>
     <!-- Linux-specific -->
     <action command="delete" search="walk.files" path="$XDG_CACHE_HOME/BraveSoftware/Brave-Browser/"/>
+    <action command="delete" search="walk.files" os="darwin" path="~/Library/Caches/BraveSoftware/Brave-Browser/"/>
     <!-- Windows-specific -->
     <action command="delete" search="glob" path="$$base$$\B*.tmp"/>
     <action command="delete" search="walk.all" path="$$profile$$\Default\Application Cache\"/>

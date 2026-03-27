@@ -10,7 +10,8 @@ import sys
 import time
 
 import bleachbit
-from bleachbit import APP_NAME, Cleaner, FileUtilities, GuiBasic, appicon_path, windows10_theme_path
+from bleachbit import (APP_NAME, Cleaner, FileUtilities, GuiBasic, appicon_path,
+                       macos_liquid_glass_theme_path, windows10_theme_path)
 from bleachbit.Cleaner import backends, register_cleaners
 from bleachbit.Constant import ABORT_BUTTON_LABEL, REQUIRES_EXPERT_MODE
 from bleachbit.GUI import logger
@@ -52,6 +53,7 @@ class GUI(Gtk.ApplicationWindow):
     _style_provider = None
     _style_provider_regular = None
     _style_provider_dark = None
+    _macos_style_provider = None
     _error_tag_color = None
     _showed_startup_messages = False
 
@@ -315,6 +317,42 @@ class GUI(Gtk.ApplicationWindow):
         else:
             logger.debug('Windows 10 theme disabled, using default theme')
 
+    def _get_macos_liquid_glass_css(self):
+        """Load macOS liquid glass CSS."""
+        if sys.platform != 'darwin':
+            return None
+        if not options.get("macos_liquid_glass"):
+            return None
+        if self._macos_style_provider is None:
+            self._macos_style_provider = Gtk.CssProvider()
+            css_path = os.path.join(macos_liquid_glass_theme_path, 'gtk.css')
+            try:
+                self._macos_style_provider.load_from_path(css_path)
+            except Exception as e:
+                logger.error('Failed to load macOS liquid glass theme: %s', e)
+                self._macos_style_provider = None
+        return self._macos_style_provider
+
+    def set_macos_liquid_glass(self):
+        """Apply or remove macOS liquid glass styling."""
+        if sys.platform != 'darwin':
+            return
+        screen = self.get_screen()
+        if screen is None:
+            logger.info('Screen not available yet, deferring macOS theme application')
+            return
+
+        if self._style_provider is not None:
+            Gtk.StyleContext.remove_provider_for_screen(
+                screen, self._style_provider)
+            self._style_provider = None
+
+        if options.get("macos_liquid_glass"):
+            self._style_provider = self._get_macos_liquid_glass_css()
+            if self._style_provider is not None:
+                Gtk.StyleContext.add_provider_for_screen(
+                    screen, self._style_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
     def _show_splash_screen(self):
         """Show the splash screen on Windows because startup may be slow"""
         if os.name != 'nt':
@@ -477,7 +515,8 @@ class GUI(Gtk.ApplicationWindow):
         return PreferencesDialog(
             self,
             self.cb_refresh_operations,
-            self.set_windows10_theme)
+            self.set_windows10_theme,
+            self.set_macos_liquid_glass)
 
     def show_preferences_dialog(self, page_name=None):
         """Show the preferences dialog.
@@ -1182,6 +1221,8 @@ class GUI(Gtk.ApplicationWindow):
         # Apply Windows 10 theme if on Windows and enabled
         if os.name == 'nt':
             self.set_windows10_theme()
+        elif sys.platform == 'darwin':
+            self.set_macos_liquid_glass()
 
     def check_orphaned_wipe_files(self):
         """Check for orphaned wipe files and offer to delete them.

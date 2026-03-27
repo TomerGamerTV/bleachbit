@@ -42,6 +42,7 @@ from bleachbit.General import (
     get_real_uid,
     get_real_username,
     makedirs,
+    os_match,
     run_external,
     run_external_nowait,
     shell_split,
@@ -62,6 +63,13 @@ class GeneralTestCase(common.BleachbitTestCase):
 
         for test in tests:
             self.assertEqual(boolstr_to_bool(test[0]), test[1])
+
+    def test_os_match_darwin_aliases(self):
+        """macOS XML aliases should match Darwin."""
+        self.assertTrue(os_match('darwin', platform='darwin'))
+        self.assertTrue(os_match('macos', platform='darwin'))
+        self.assertTrue(os_match('osx', platform='darwin'))
+        self.assertFalse(os_match('windows', platform='darwin'))
 
     def test_get_executable(self):
         """Test for get_executable()"""
