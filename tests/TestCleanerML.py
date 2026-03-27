@@ -26,6 +26,7 @@ Test cases for module CleanerML
 import os
 import shutil
 import sys
+from unittest import mock
 
 # first party imports
 import bleachbit
@@ -199,3 +200,30 @@ class CleanerMLTestCase(common.BleachbitTestCase):
         self.run_all(xmlc, True)
         self.assertNotExists(test_log_path_a)
         self.assertNotExists(test_log_path_b)
+
+    def test_var_darwin_fallback_uses_linux_value(self):
+        """On macOS, fallback to Linux/Unix var values when no darwin value exists."""
+        xml_str = f"""
+<cleaner id="testvar_darwin">
+    <label>cleaner label</label>
+    <description>cleaner description</description>
+    <var name="basepath">
+        <value os="linux">{self.tempdir}/darwin-fallback</value>
+    </var>
+    <option id="option1">
+        <label>option1 label</label>
+        <description>option1 description</description>
+        <action search="file" command="delete" path="$$basepath$$/test.log" />
+    </option>
+</cleaner>
+"""
+        cml_path = os.path.join(self.tempdir, 'test_darwin_fallback.xml')
+        self.write_file(cml_path, xml_str.encode(sys.getdefaultencoding()))
+        canary = os.path.join(self.tempdir, 'darwin-fallback', 'test.log')
+        common.touch_file(canary)
+        self.assertExists(canary)
+        with mock.patch('sys.platform', 'darwin'):
+            xmlc = CleanerML(cml_path)
+            self.assertTrue(xmlc.cleaner.is_usable())
+            self.run_all(xmlc, True)
+        self.assertNotExists(canary)

@@ -20,7 +20,7 @@ APP_VERSION = "5.1.3"
 APP_NAME = "BleachBit"
 APP_URL = "https://www.bleachbit.org"
 APP_COPYRIGHT = "Copyright (C) 2008-2026 Andrew Ziem"
-MACOS_BUNDLE_IDENTIFIER = "com.tomergamertv.bleachbit"
+MACOS_BUNDLE_IDENTIFIER = "org.bleachbit.BleachBit"
 
 socket_timeout = 10
 
