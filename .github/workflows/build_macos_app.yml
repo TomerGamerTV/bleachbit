@@ -32,7 +32,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller
+          # PyInstaller 6.19.0 regresses macOS bundle assembly with nested data
+          # directories (fails in BUNDLE step creating Contents/Frameworks/...).
+          # Pin to a known-good release for deterministic CI builds.
+          pip install -r requirements.txt "pyinstaller==6.16.0"
 
       - name: Generate Revision.py
         run: |
