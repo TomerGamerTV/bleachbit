@@ -32,7 +32,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pyinstaller
+          # PyInstaller 6.19.0 regresses macOS bundle assembly with nested data
+          # directories (fails in BUNDLE step creating Contents/Frameworks/...).
+          # Pin to a known-good release for deterministic CI builds.
+          pip install -r requirements.txt "pyinstaller==6.16.0"
 
       - name: Generate Revision.py
         run: |
@@ -44,6 +47,11 @@ jobs:
 
       - name: Build .app bundle with PyInstaller
         run: |
+          # PyInstaller can fail during macOS BUNDLE assembly when packaging
+          # nested directories that contain relative symlinks. Flatten the
+          # theme tree into regular files before passing it via --add-data.
+          rm -rf themes_pyinstaller
+          cp -RL themes themes_pyinstaller
           mkdir -p icon.iconset
           sips -z 16 16 bleachbit.png --out icon.iconset/icon_16x16.png
           sips -z 32 32 bleachbit.png --out icon.iconset/icon_16x16@2x.png
@@ -62,7 +70,7 @@ jobs:
             --icon bleachbit.icns \
             --add-data "bleachbit.png:." \
             --add-data "cleaners:cleaners" \
-            --add-data "themes:themes" \
+            --add-data "themes_pyinstaller:themes" \
             --add-data "po:po" \
             --add-data "locale:locale" \
             bleachbit.py
