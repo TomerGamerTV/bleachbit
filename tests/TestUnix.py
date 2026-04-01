@@ -669,12 +669,28 @@ root               531   0.0  0.0  2501712    588   ??  Ss   20May16   0:02.40 s
             '/var/log/whitelisted/foo.0'
         ]
         mock_cid.return_value = iter(expected_delete + expected_keep)
-        result = list(rotated_logs())
+        with mock.patch('sys.platform', 'linux'):
+            result = list(rotated_logs())
         self.assertEqual(set(result), set(expected_delete))
         for path in expected_keep:
             self.assertNotIn(path, result)
         mock_cid.assert_called_once_with('/var/log')
         mock_whitelisted.assert_called()
+
+    @mock.patch('os.access')
+    @mock.patch('bleachbit.FileUtilities.whitelisted', return_value=False)
+    @mock.patch('bleachbit.FileUtilities.children_in_directory')
+    def test_rotated_logs_macos_skips_protected_directories(self, mock_cid, _mock_whitelisted, mock_access):
+        mock_cid.return_value = iter([
+            '/var/log/system.log.1.gz',
+            '/var/log/foo/bar.0',
+        ])
+        mock_access.side_effect = lambda path, mode: path == '/var/log/foo'
+
+        with mock.patch('sys.platform', 'darwin'):
+            result = list(rotated_logs())
+
+        self.assertEqual(result, ['/var/log/foo/bar.0'])
 
     @common.skipIfWindows
     def test_run_cleaner_cmd(self):

@@ -562,6 +562,14 @@ def rotated_logs():
         if keep_list_match:
             continue
         if positive_re.search(path):
+            if sys.platform == 'darwin':
+                parent = os.path.dirname(path) or os.curdir
+                # Modern macOS protects most rotated system logs in /var/log
+                # from regular users. Skip paths that cannot be deleted
+                # instead of surfacing a predictable Access denied error for
+                # every protected entry.
+                if not os.access(parent, os.W_OK | os.X_OK):
+                    continue
             yield path
 
 
