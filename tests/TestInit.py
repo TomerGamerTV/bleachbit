@@ -25,7 +25,7 @@ Test cases for __init__
 
 import os
 
-from bleachbit import get_share_dirs, get_share_path
+from bleachbit import _get_macos_bundle_resource_dir, get_share_dirs, get_share_path
 from tests import common
 
 
@@ -73,6 +73,19 @@ class InitTestCase(common.BleachbitTestCase):
         for fn in ('app-menu.ui', 'protected_path.xml'):
             self.assertExists(get_share_path(fn))
         self.assertIsNone(get_share_path('nonexistent'))
+
+    def test_get_macos_bundle_resource_dir(self):
+        """macOS bundle resource helper should derive Contents/Resources."""
+        exe_path = '/Applications/BleachBit.app/Contents/MacOS'
+        got = _get_macos_bundle_resource_dir(
+            exe_path, frozen=True, platform_name='darwin')
+        self.assertEqual(
+            got, '/Applications/BleachBit.app/Contents/Resources')
+
+        self.assertIsNone(_get_macos_bundle_resource_dir(
+            exe_path, frozen=False, platform_name='darwin'))
+        self.assertIsNone(_get_macos_bundle_resource_dir(
+            exe_path, frozen=True, platform_name='linux'))
 
 
 def suite():

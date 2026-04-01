@@ -1,28 +1,32 @@
 /*
- * Lightweight "liquid glass" effect for macOS GTK windows.
- * Compatible with GTK3; avoids blur APIs that are not available in GTK3.
+ * Subtle macOS-inspired styling for GTK3.
+ *
+ * Keep the main window opaque: true translucent windows without native blur
+ * make the interface look washed out and unreadable on Quartz.
  */
 
-window, .background {
-  background-color: alpha(@theme_bg_color, 0.86);
+window, .background, dialog {
+  background-image: none;
+  background-color: @theme_bg_color;
 }
 
 headerbar, .titlebar {
   background-image: none;
-  background-color: alpha(@theme_bg_color, 0.68);
-  border-bottom: 1px solid alpha(@theme_fg_color, 0.12);
+  background-color: shade(@theme_bg_color, 0.96);
+  border-bottom: 1px solid alpha(@theme_fg_color, 0.10);
+  box-shadow: inset 0 -1px alpha(@theme_fg_color, 0.06);
 }
 
 button {
   background-image: none;
-  background-color: alpha(@theme_base_color, 0.72);
+  background-color: alpha(@theme_base_color, 0.96);
   border-radius: 10px;
 }
 
 button:hover {
-  background-color: alpha(@theme_base_color, 0.84);
+  background-color: @theme_base_color;
 }
 
 scrolledwindow, textview, treeview {
-  background-color: alpha(@theme_base_color, 0.90);
+  background-color: @theme_base_color;
 }

@@ -26,6 +26,7 @@ import os
 import sys
 
 have_gui = True
+gtk_unavailable_reason = None
 
 
 def _apply_fontconfig_backend_preference():
@@ -65,10 +66,12 @@ if 'posix' == os.name:
     # Check for GUI only when needed: this avoids a Gtk warning when
     # a display is not available.
     if len(sys.argv) == 1 or '--gui' in sys.argv:
-        from bleachbit.GtkShim import HAVE_GTK
+        from bleachbit.GtkShim import HAVE_GTK, get_gtk_unavailable_reason
         have_gui = HAVE_GTK
+        gtk_unavailable_reason = get_gtk_unavailable_reason()
     else:
         have_gui = False
+        gtk_unavailable_reason = None
 
 if os.name == 'nt':
     # change error handling to avoid popup with GTK 3
@@ -86,9 +89,15 @@ if 1 == len(sys.argv) and have_gui:
     app = bleachbit.GuiApplication.Bleachbit()
     sys.exit(app.run(sys.argv))
 else:
+    if '--gui' in sys.argv and not have_gui:
+        if gtk_unavailable_reason:
+            print(gtk_unavailable_reason, file=sys.stderr)
+        sys.exit(1)
     # Either CLI args were provided or no display is available
     import bleachbit.CLI
     # If no args and defaulting to CLI, print usage information
     if 1 == len(sys.argv) and not have_gui:
+        if gtk_unavailable_reason:
+            print(gtk_unavailable_reason, file=sys.stderr)
         sys.argv.append('--help')
     bleachbit.CLI.process_cmd_line()

@@ -17,6 +17,7 @@ from unittest import mock
 from tests import common
 from bleachbit.GtkShim import (
     _check_display_available,
+    _is_macos_gui_launch_context,
     _build_error_html,
     _handle_gtk_import_error,
     _show_windows_error_dialog,
@@ -123,15 +124,40 @@ class CheckDisplayAvailableTestCase(unittest.TestCase):
             self.assertTrue(ok)
             self.assertIsNone(reason)
 
-    def test_macos_without_display_vars_is_available(self):
-        """macOS should not require DISPLAY/WAYLAND_DISPLAY."""
+    def test_macos_bundle_launch_without_display_vars_is_available(self):
+        """macOS bundle launches should not require DISPLAY/WAYLAND_DISPLAY."""
         with mock.patch('os.name', 'posix'), \
                 mock.patch('sys.platform', 'darwin'), \
-                mock.patch.dict(os.environ, {'DISPLAY': '', 'WAYLAND_DISPLAY': ''}, clear=False):
+                mock.patch.dict(
+                    os.environ,
+                    {
+                        'DISPLAY': '',
+                        'WAYLAND_DISPLAY': '',
+                        '__CFBundleIdentifier': 'org.bleachbit.BleachBit',
+                    },
+                    clear=False,
+                ):
             ok, reason = _check_display_available()
             self.assertTrue(ok)
             self.assertIsNone(reason)
 
+    def test_macos_console_launch_is_unavailable(self):
+        """macOS console launches should fail gracefully before GTK import."""
+        with mock.patch('os.name', 'posix'), \
+                mock.patch('sys.platform', 'darwin'), \
+                mock.patch('sys.executable', '/opt/homebrew/bin/python3'), \
+                mock.patch.dict(
+                    os.environ,
+                    {
+                        'DISPLAY': '',
+                        'WAYLAND_DISPLAY': '',
+                        '__CFBundleIdentifier': 'com.apple.Terminal',
+                    },
+                    clear=False,
+                ):
+            ok, reason = _check_display_available()
+            self.assertFalse(ok)
+            self.assertIn('BleachBit app bundle', reason)
     def test_posix_without_display_vars_is_unavailable(self):
         """Other POSIX platforms should require DISPLAY/WAYLAND_DISPLAY."""
         with mock.patch('os.name', 'posix'), \
@@ -191,6 +217,44 @@ class HandleGtkImportErrorTestCase(unittest.TestCase):
             _title, html = m.call_args[0]
             self.assertIn('Traceback', html)
             self.assertIn('System information', html)
+
+
+class MacGuiLaunchContextTestCase(unittest.TestCase):
+    """Tests for _is_macos_gui_launch_context()."""
+
+    def test_false_outside_macos(self):
+        """Non-macOS platforms must not be treated as macOS app launches."""
+        with mock.patch('sys.platform', 'linux'):
+            self.assertFalse(_is_macos_gui_launch_context())
+
+    def test_true_for_matching_bundle_identifier(self):
+        """The BleachBit bundle identifier should enable macOS GUI startup."""
+        with mock.patch('sys.platform', 'darwin'), \
+                mock.patch.dict(
+                    os.environ,
+                    {'__CFBundleIdentifier': 'org.bleachbit.BleachBit'},
+                    clear=False,
+                ):
+            self.assertTrue(_is_macos_gui_launch_context())
+
+    def test_true_for_frozen_app_bundle_without_bundle_identifier(self):
+        """Frozen app bundles should work even if the env bundle id is absent."""
+        with mock.patch('sys.platform', 'darwin'), \
+                mock.patch('sys.executable', '/Applications/BleachBit.app/Contents/MacOS/BleachBit'), \
+                mock.patch('sys.frozen', True, create=True), \
+                mock.patch.dict(os.environ, {}, clear=True):
+            self.assertTrue(_is_macos_gui_launch_context())
+
+    def test_false_for_direct_python_launch(self):
+        """Direct interpreter launches should not be treated as app bundles."""
+        with mock.patch('sys.platform', 'darwin'), \
+                mock.patch('sys.executable', '/opt/homebrew/bin/python3'), \
+                mock.patch.dict(
+                    os.environ,
+                    {'__CFBundleIdentifier': 'com.apple.Terminal'},
+                    clear=False,
+                ):
+            self.assertFalse(_is_macos_gui_launch_context())
 
 
 if __name__ == '__main__':

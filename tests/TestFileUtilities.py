@@ -239,6 +239,16 @@ class FileUtilitiesTestCase(common.BleachbitTestCase, WindowsLinksMixIn):
         self.assertEqual(locale.setlocale(
             locale.LC_NUMERIC), self.old_locale_str)
 
+    def test_open_files_lsof_decodes_bytes_output(self):
+        """lsof output from subprocess should work when returned as bytes."""
+        got = list(open_files_lsof(lambda: b'p1\nn/tmp/test\n'))
+        self.assertEqual(got, ['/tmp/test'])
+
+    def test_open_files_lsof_accepts_text_output(self):
+        """lsof helper should also accept injected text output in tests."""
+        got = list(open_files_lsof(lambda: 'p1\nn/tmp/test\n'))
+        self.assertEqual(got, ['/tmp/test'])
+
     def test_bytes_to_human_one_way(self):
         """Test one-way conversion of bytes_to_human()"""
 

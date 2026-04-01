@@ -132,7 +132,10 @@ def open_files_lsof(run_lsof=None):
     if run_lsof is None:
         def run_lsof():
             return subprocess.check_output(["lsof", "-Fn", "-n"])
-    for f in run_lsof().split("\n"):
+    output = run_lsof()
+    if isinstance(output, bytes):
+        output = output.decode('utf-8', errors='replace')
+    for f in output.splitlines():
         if f.startswith("n/"):
             yield f[1:]  # Drop lsof's "n"
 

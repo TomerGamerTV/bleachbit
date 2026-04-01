@@ -16,7 +16,7 @@ from configparser import NoOptionError, RawConfigParser  # used in other files
 
 from bleachbit import Log
 
-APP_VERSION = "5.1.4"
+APP_VERSION = "5.1.5"
 APP_NAME = "BleachBit"
 APP_URL = "https://www.bleachbit.org"
 APP_COPYRIGHT = "Copyright (C) 2008-2026 Andrew Ziem"
@@ -52,11 +52,50 @@ else:
     # __file__ is absolute path to __init__.py
     bleachbit_exe_path = os.path.dirname(os.path.dirname(__file__))
 
+runtime_resource_root = getattr(sys, '_MEIPASS', None)
+
+
+def _get_macos_bundle_resource_dir(exe_path=None, *, frozen=None, platform_name=None):
+    """Return the macOS app bundle Resources directory, if applicable."""
+    if exe_path is None:
+        exe_path = bleachbit_exe_path
+    if frozen is None:
+        frozen = hasattr(sys, 'frozen')
+    if platform_name is None:
+        platform_name = sys.platform
+    if not frozen or platform_name != 'darwin':
+        return None
+    return os.path.normpath(os.path.join(exe_path, '..', 'Resources'))
+
+
+macos_bundle_resource_dir = _get_macos_bundle_resource_dir()
+
+
+def _resource_candidates(*relative_paths):
+    """Return absolute candidate paths under runtime resource roots."""
+    roots = []
+    if runtime_resource_root:
+        roots.append(runtime_resource_root)
+    if macos_bundle_resource_dir:
+        roots.append(macos_bundle_resource_dir)
+    roots.append(bleachbit_exe_path)
+
+    candidates = []
+    seen = set()
+    for root in roots:
+        for relative_path in relative_paths:
+            candidate = os.path.normpath(os.path.join(root, relative_path))
+            if candidate in seen:
+                continue
+            seen.add(candidate)
+            candidates.append(candidate)
+    return tuple(candidates)
+
 # license
 license_filename = None
 license_filenames = ('/usr/share/common-licenses/GPL-3',  # Debian, Ubuntu
                      # Microsoft Windows
-                     os.path.join(bleachbit_exe_path, 'COPYING'),
+                     *_resource_candidates('COPYING'),
                      '/usr/share/doc/bleachbit-' + APP_VERSION + '/COPYING',  # CentOS, Fedora, RHEL
                      '/usr/share/licenses/bleachbit/COPYING',  # Fedora 21+, RHEL 7+
                      '/usr/share/doc/packages/bleachbit/COPYING',  # OpenSUSE 11.1
@@ -119,7 +158,16 @@ personal_cleaners_dir = os.path.join(options_dir, "cleaners")
 # On Windows in portable mode, the bleachbit_exe_path is equal to
 # options_dir, so be careful that system_cleaner_dir is not set to
 # personal_cleaners_dir.
-if os.path.isdir(os.path.join(bleachbit_exe_path, 'cleaners')) and not portable_mode:
+bundle_cleaners_dir = None
+if macos_bundle_resource_dir:
+    candidate = os.path.join(
+        runtime_resource_root or macos_bundle_resource_dir, 'cleaners')
+    if os.path.isdir(candidate):
+        bundle_cleaners_dir = candidate
+
+if bundle_cleaners_dir and not portable_mode:
+    system_cleaners_dir = bundle_cleaners_dir
+elif os.path.isdir(os.path.join(bleachbit_exe_path, 'cleaners')) and not portable_mode:
     system_cleaners_dir = os.path.join(bleachbit_exe_path, 'cleaners')
 elif sys.platform == 'linux':
     system_cleaners_dir = '/usr/share/bleachbit/cleaners'
@@ -156,10 +204,21 @@ def get_share_dirs():
     """Return ordered list of directories to search for shared data files."""
     if hasattr(sys, 'frozen'):
         # frozen in py2exe
-        base_dirs = [
+        base_dirs = []
+        if runtime_resource_root:
+            base_dirs.extend([
+                os.path.join(runtime_resource_root, 'share'),
+                runtime_resource_root,
+            ])
+        if macos_bundle_resource_dir:
+            base_dirs.extend([
+                os.path.join(macos_bundle_resource_dir, 'share'),
+                macos_bundle_resource_dir,
+            ])
+        base_dirs.extend([
             os.path.join(bleachbit_exe_path, 'share'),
             bleachbit_exe_path,
-        ]
+        ])
     else:
         # installed .deb or .rpm has `__file__` = "/usr/share/bleachbit/__init__.py",
         # so that dirname() is "/usr/share/bleachbit"
@@ -197,18 +256,18 @@ def get_share_path(filename):
 
 # windows10 theme
 windows10_theme_path = os.path.normpath(
-    os.path.join(bleachbit_exe_path, 'themes/windows10'))
+    _resource_candidates('themes/windows10')[0])
 macos_liquid_glass_theme_path = os.path.normpath(
-    os.path.join(bleachbit_exe_path, 'themes/macos'))
+    _resource_candidates('themes/macos')[0])
 
 # application icon
 __icons = (
     '/usr/share/pixmaps/bleachbit.png',  # Linux
     '/usr/pkg/share/pixmaps/bleachbit.png',  # NetBSD
     '/usr/local/share/pixmaps/bleachbit.png',  # FreeBSD and OpenBSD
+    *_resource_candidates('bleachbit.png'),
     os.path.normpath(os.path.join(bleachbit_exe_path,
                                   'share\\bleachbit.png')),  # Windows
-    os.path.normpath(os.path.join(bleachbit_exe_path, '..', 'Resources', 'bleachbit.png')),  # macOS bundle
     # When running from source (i.e., not installed).
     os.path.normpath(os.path.join(bleachbit_exe_path, 'bleachbit.png')),
 )
@@ -221,6 +280,10 @@ for __icon in __icons:
 if os.path.exists("./locale/"):
     # local locale (personal)
     locale_dir = os.path.abspath("./locale/")
+elif macos_bundle_resource_dir and os.path.isdir(os.path.join(macos_bundle_resource_dir, 'locale')):
+    locale_dir = os.path.join(macos_bundle_resource_dir, 'locale')
+elif runtime_resource_root and os.path.isdir(os.path.join(runtime_resource_root, 'locale')):
+    locale_dir = os.path.join(runtime_resource_root, 'locale')
 # system-wide installed locale
 elif sys.platform in ('linux', 'darwin'):
     locale_dir = "/usr/share/locale/"

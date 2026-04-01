@@ -40,7 +40,7 @@ from pathlib import PureWindowsPath
 from html import escape as esc
 from traceback import format_exc
 
-from bleachbit import bleachbit_exe_path
+from bleachbit import MACOS_BUNDLE_IDENTIFIER, bleachbit_exe_path
 
 HELP_URL = 'https://link.bleachbit.org/get-help'
 PYGOBJECT_URL = 'https://link.bleachbit.org/pygobject-lib-bin-error'
@@ -200,9 +200,14 @@ def _check_display_available():
         return True, None
 
     if sys.platform == 'darwin':
-        # macOS GUI apps use Quartz/Aqua and typically do not set DISPLAY.
-        # Treat display as available so GTK can initialize normally.
-        return True, None
+        if _is_macos_gui_launch_context():
+            return True, None
+        return False, (
+            'macOS GUI startup requires launching BleachBit from the '
+            'BleachBit app bundle. Running the GTK GUI from a console '
+            'interpreter can abort inside Quartz before Python can handle '
+            'the error.'
+        )
 
     # Check for X11 or Wayland display
     has_display = bool(
@@ -213,6 +218,25 @@ def _check_display_available():
         return False, 'No DISPLAY or WAYLAND_DISPLAY environment variable set'
 
     return True, None
+
+
+def _is_macos_gui_launch_context():
+    """Return whether the current macOS process is safe for Quartz GTK startup.
+
+    GTK on macOS aborts natively when initialized from a console-hosted Python
+    process instead of the BleachBit application bundle. Check for the app
+    bundle launch context before importing GTK so BleachBit can fail
+    gracefully instead of crashing the interpreter.
+    """
+    if sys.platform != 'darwin':
+        return False
+
+    bundle_identifier = os.environ.get('__CFBundleIdentifier')
+    if bundle_identifier == MACOS_BUNDLE_IDENTIFIER:
+        return True
+
+    executable = os.path.normpath(sys.executable)
+    return hasattr(sys, 'frozen') and '.app/Contents/MacOS/' in executable
 
 
 def _try_import_gtk():
