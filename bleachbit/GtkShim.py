@@ -196,7 +196,12 @@ def _check_display_available():
         tuple: (is_available: bool, reason: str or None)
     """
     if os.name == 'nt':
-        # Windows always has a display
+        # Windows always has a display.
+        return True, None
+
+    if sys.platform == 'darwin':
+        # macOS GUI apps use Quartz/Aqua and typically do not set DISPLAY.
+        # Treat display as available so GTK can initialize normally.
         return True, None
 
     # Check for X11 or Wayland display
