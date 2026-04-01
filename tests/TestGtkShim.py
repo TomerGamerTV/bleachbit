@@ -16,6 +16,7 @@ from unittest import mock
 
 from tests import common
 from bleachbit.GtkShim import (
+    _check_display_available,
     _build_error_html,
     _handle_gtk_import_error,
     _show_windows_error_dialog,
@@ -109,6 +110,36 @@ class BuildErrorHtmlTestCase(unittest.TestCase):
         self.assertIn('<!DOCTYPE html>', html)
         self.assertIn('<html', html)
         self.assertIn('BleachBit cannot start', html)
+
+
+class CheckDisplayAvailableTestCase(unittest.TestCase):
+    """Tests for _check_display_available()."""
+
+    def test_windows_always_available(self):
+        """Windows should report a display even without DISPLAY variables."""
+        with mock.patch('os.name', 'nt'), \
+                mock.patch.dict(os.environ, {'DISPLAY': '', 'WAYLAND_DISPLAY': ''}, clear=False):
+            ok, reason = _check_display_available()
+            self.assertTrue(ok)
+            self.assertIsNone(reason)
+
+    def test_macos_without_display_vars_is_available(self):
+        """macOS should not require DISPLAY/WAYLAND_DISPLAY."""
+        with mock.patch('os.name', 'posix'), \
+                mock.patch('sys.platform', 'darwin'), \
+                mock.patch.dict(os.environ, {'DISPLAY': '', 'WAYLAND_DISPLAY': ''}, clear=False):
+            ok, reason = _check_display_available()
+            self.assertTrue(ok)
+            self.assertIsNone(reason)
+
+    def test_posix_without_display_vars_is_unavailable(self):
+        """Other POSIX platforms should require DISPLAY/WAYLAND_DISPLAY."""
+        with mock.patch('os.name', 'posix'), \
+                mock.patch('sys.platform', 'linux'), \
+                mock.patch.dict(os.environ, {'DISPLAY': '', 'WAYLAND_DISPLAY': ''}, clear=False):
+            ok, reason = _check_display_available()
+            self.assertFalse(ok)
+            self.assertIn('No DISPLAY or WAYLAND_DISPLAY', reason)
 
 
 class ShowWindowsErrorDialogTestCase(unittest.TestCase):
